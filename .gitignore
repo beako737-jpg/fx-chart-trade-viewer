@@ -1,0 +1,7 @@
+*.html
+!template.html
+!sample_demo.html
+candles_cache.json
+chart_data.json
+sample_data/sample_chart_data.json
+__pycache__/

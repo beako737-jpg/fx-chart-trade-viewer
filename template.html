@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>USD/JPY 取引タイミング突き合わせ</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page-plane);
+  }
+  .viz-root {
+    color-scheme: light;
+    --page-plane:     #f9f9f7;
+    --surface-1:      #fcfcfb;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --grid:           #e1e0d9;
+    --axis:           #c3c2b7;
+    --series-price:   #2a78d6;
+    --series-price-fill: rgba(42,120,214,0.10);
+    --status-good:    #0ca30c;
+    --status-critical:#d03b3b;
+    --border:         rgba(11,11,11,0.10);
+    --chip-bg:        #f0efec;
+    --chip-bg-active: #2a78d6;
+    --chip-fg-active: #ffffff;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --page-plane:     #0d0d0d;
+      --surface-1:      #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --grid:           #2c2c2a;
+      --axis:           #383835;
+      --series-price:   #3987e5;
+      --series-price-fill: rgba(57,135,229,0.14);
+      --status-good:    #0ca30c;
+      --status-critical:#e66767;
+      --border:         rgba(255,255,255,0.10);
+      --chip-bg:        #262624;
+      --chip-bg-active: #3987e5;
+      --chip-fg-active: #0d0d0d;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --page-plane:     #0d0d0d;
+    --surface-1:      #1a1a19;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --grid:           #2c2c2a;
+    --axis:           #383835;
+    --series-price:   #3987e5;
+    --series-price-fill: rgba(57,135,229,0.14);
+    --status-good:    #0ca30c;
+    --status-critical:#e66767;
+    --border:         rgba(255,255,255,0.10);
+    --chip-bg:        #262624;
+    --chip-bg-active: #3987e5;
+    --chip-fg-active: #0d0d0d;
+  }
+  h1 { font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: var(--text-secondary); margin: 0 0 20px; line-height: 1.6; }
+  .panel {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 16px 8px;
+  }
+  .filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .filters button {
+    font: inherit; font-size: 13px; color: var(--text-secondary);
+    background: var(--chip-bg); border: none; border-radius: 999px;
+    padding: 6px 14px; cursor: pointer;
+  }
+  .filters button.active { background: var(--chip-bg-active); color: var(--chip-fg-active); font-weight: 600; }
+  .stats { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .grid-line { stroke: var(--grid); stroke-width: 1; }
+  .axis-line { stroke: var(--axis); stroke-width: 1; }
+  .axis-label { fill: var(--text-muted); font-size: 11px; }
+  .price-line { fill: none; stroke: var(--series-price); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .price-area { fill: var(--series-price-fill); stroke: none; }
+  .crosshair { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none; }
+  .trade-link { stroke-width: 1.5; pointer-events: none; }
+  .trade-marker { stroke: var(--surface-1); stroke-width: 2; cursor: pointer; }
+  .trade-exit { stroke: var(--surface-1); stroke-width: 2; fill: var(--surface-1); cursor: pointer; }
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); margin: 10px 2px 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 12px; height: 12px; flex: none; }
+  .tooltip {
+    position: absolute; pointer-events: none; z-index: 5;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 12px; color: var(--text-primary); box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    min-width: 180px; max-width: 280px; max-height: 260px; overflow-y: auto; display: none;
+  }
+  .tooltip .t-date { font-weight: 600; margin-bottom: 4px; }
+  .tooltip .t-close { color: var(--text-secondary); margin-bottom: 6px; }
+  .tooltip .t-trade { padding: 4px 0; border-top: 1px solid var(--grid); }
+  .tooltip .t-trade:first-of-type { border-top: none; }
+  .tooltip .t-pnl-good { color: var(--status-good); font-weight: 600; }
+  .tooltip .t-pnl-bad { color: var(--status-critical); font-weight: 600; }
+  .chart-wrap { position: relative; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin: 16px 2px 8px; }
+  .toolbar button {
+    font: inherit; font-size: 13px; color: var(--text-secondary);
+    background: var(--chip-bg); border: none; border-radius: 8px;
+    padding: 6px 12px; cursor: pointer;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  table caption { caption-side: top; text-align: left; font-size: 12px; color: var(--text-muted); padding-bottom: 6px; }
+  th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--grid); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--text-muted); font-weight: 500; position: sticky; top: 0; background: var(--surface-1); }
+  .table-scroll { max-height: 420px; overflow-y: auto; display: none; }
+  .pnl-good { color: var(--status-good); font-weight: 600; }
+  .pnl-bad { color: var(--status-critical); font-weight: 600; }
+  .note { font-size: 11px; color: var(--text-muted); margin-top: 14px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="viz-root">
+  <h1>USD/JPY 取引タイミング突き合わせ</h1>
+  <p class="subtitle">
+    日足終値（Twelve Data・無料プラン、1日1回転のみ取得してキャッシュ）に、約定履歴CSVの実際の売買を重ねています。
+    ▲買エントリー／▼売エントリーの位置は実際の約定価格、線は決済価格までの値幅で、色は損益（緑=利益／赤=損失）を表します。
+  </p>
+  <div class="panel">
+    <div class="filters" id="filters">
+      <span class="stats" id="stats"></span>
+    </div>
+    <div class="chart-wrap">
+      <svg id="chart" viewBox="0 0 1000 440" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-price)"></span>USD/JPY 日足終値</div>
+      <div class="legend-item"><svg width="12" height="12"><polygon points="6,1 11,10 1,10" fill="var(--text-secondary)"/></svg>買エントリー</div>
+      <div class="legend-item"><svg width="12" height="12"><polygon points="1,2 11,2 6,11" fill="var(--text-secondary)"/></svg>売エントリー</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--status-good);border-radius:50%"></span>利益</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--status-critical);border-radius:50%"></span>損失</div>
+    </div>
+    <div class="toolbar">
+      <span></span>
+      <button id="toggleTable">テーブル表示に切り替え</button>
+    </div>
+    <div class="table-scroll" id="tableScroll">
+      <table id="tradeTable">
+        <caption>表示中の期間の取引一覧（クリックでソートは未対応・時系列順）</caption>
+        <thead>
+          <tr><th>日時</th><th>売買</th><th>数量</th><th>約定価格</th><th>決済価格</th><th>損益</th><th>pips</th></tr>
+        </thead>
+        <tbody id="tradeTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <p class="note">
+    データ範囲: <span id="rangeNote"></span>／ 価格データは Twelve Data の無料プランで1日1回のAPI呼び出しのみ使用し、ローカルにキャッシュして再利用しています（このページはオフラインで開けます）。売買方向は決済取引から逆算した建玉方向です。
+  </p>
+</div>
+<script>
+const DATA = __DATA_JSON__;
+
+const candles = DATA.candles; // sorted asc by date
+const trades = DATA.trades;   // sorted asc by datetime
+
+const dateIndex = new Map(candles.map((c, i) => [c.date, i]));
+trades.forEach(t => { t.idx = dateIndex.get(t.date.replace(/\//g, '-')); });
+
+const PRESETS = [
+  { key: 'all', label: '全期間' },
+  { key: '180', label: '直近180営業日' },
+  { key: '90', label: '直近90営業日' },
+  { key: '30', label: '直近30営業日' },
+];
+let currentPreset = 'all';
+
+const filtersEl = document.getElementById('filters');
+const statsEl = document.getElementById('stats');
+PRESETS.forEach(p => {
+  const btn = document.createElement('button');
+  btn.textContent = p.label;
+  btn.dataset.key = p.key;
+  btn.className = p.key === currentPreset ? 'active' : '';
+  btn.addEventListener('click', () => { currentPreset = p.key; render(); });
+  filtersEl.insertBefore(btn, statsEl);
+});
+
+function visibleCandles() {
+  if (currentPreset === 'all') return candles;
+  const n = parseInt(currentPreset, 10);
+  return candles.slice(Math.max(0, candles.length - n));
+}
+
+const svgNS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('chart');
+const tooltip = document.getElementById('tooltip');
+
+const PAD = { top: 16, right: 20, bottom: 28, left: 54 };
+const W = 1000, H = 440;
+const plotW = W - PAD.left - PAD.right;
+const plotH = H - PAD.top - PAD.bottom;
+
+function fmtPrice(v) { return v.toFixed(3); }
+function fmtPnl(v) { return (v >= 0 ? '+' : '') + Math.round(v).toLocaleString('ja-JP') + '円'; }
+function fmtPips(v) { return (v >= 0 ? '+' : '') + v.toFixed(1); }
+
+function render() {
+  document.querySelectorAll('#filters button').forEach(b => {
+    b.classList.toggle('active', b.dataset.key === currentPreset);
+  });
+
+  const vc = visibleCandles();
+  const startIdx = candles.indexOf(vc[0]);
+  const endIdx = candles.indexOf(vc[vc.length - 1]);
+  const vTrades = trades.filter(t => t.idx >= startIdx && t.idx <= endIdx);
+
+  statsEl.textContent = `${vc[0].date} 〜 ${vc[vc.length-1].date}／取引 ${vTrades.length}件`;
+  document.getElementById('rangeNote').textContent = `${candles[0].date} 〜 ${candles[candles.length-1].date}（価格データ） ／ ${trades[0].date} 〜 ${trades[trades.length-1].date}（取引履歴）`;
+
+  const n = vc.length;
+  const xAt = i => PAD.left + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1));
+
+  let lo = Math.min(...vc.map(c => c.low));
+  let hi = Math.max(...vc.map(c => c.high));
+  vTrades.forEach(t => { lo = Math.min(lo, t.entry, t.exit); hi = Math.max(hi, t.entry, t.exit); });
+  const span = hi - lo || 1;
+  lo -= span * 0.08; hi += span * 0.08;
+  const yAt = p => PAD.top + plotH - ((p - lo) / (hi - lo)) * plotH;
+
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  // gridlines + y labels
+  const yTicks = 5;
+  for (let i = 0; i <= yTicks; i++) {
+    const p = lo + ((hi - lo) * i) / yTicks;
+    const y = yAt(p);
+    const gl = document.createElementNS(svgNS, 'line');
+    gl.setAttribute('x1', PAD.left); gl.setAttribute('x2', W - PAD.right);
+    gl.setAttribute('y1', y); gl.setAttribute('y2', y);
+    gl.setAttribute('class', 'grid-line');
+    svg.appendChild(gl);
+    const lbl = document.createElementNS(svgNS, 'text');
+    lbl.setAttribute('x', PAD.left - 8); lbl.setAttribute('y', y + 3);
+    lbl.setAttribute('text-anchor', 'end'); lbl.setAttribute('class', 'axis-label');
+    lbl.textContent = p.toFixed(1);
+    svg.appendChild(lbl);
+  }
+
+  // x labels (month boundaries)
+  let lastMonth = '';
+  vc.forEach((c, i) => {
+    const month = c.date.slice(0, 7);
+    if (month !== lastMonth) {
+      lastMonth = month;
+      const x = xAt(i);
+      const lbl = document.createElementNS(svgNS, 'text');
+      lbl.setAttribute('x', x); lbl.setAttribute('y', H - PAD.bottom + 18);
+      lbl.setAttribute('text-anchor', 'start'); lbl.setAttribute('class', 'axis-label');
+      lbl.textContent = c.date.slice(0, 7);
+      svg.appendChild(lbl);
+      const tick = document.createElementNS(svgNS, 'line');
+      tick.setAttribute('x1', x); tick.setAttribute('x2', x);
+      tick.setAttribute('y1', H - PAD.bottom); tick.setAttribute('y2', H - PAD.bottom + 4);
+      tick.setAttribute('class', 'axis-line');
+      svg.appendChild(tick);
+    }
+  });
+  const baseAxis = document.createElementNS(svgNS, 'line');
+  baseAxis.setAttribute('x1', PAD.left); baseAxis.setAttribute('x2', W - PAD.right);
+  baseAxis.setAttribute('y1', H - PAD.bottom); baseAxis.setAttribute('y2', H - PAD.bottom);
+  baseAxis.setAttribute('class', 'axis-line');
+  svg.appendChild(baseAxis);
+
+  // area + line
+  const linePts = vc.map((c, i) => `${xAt(i)},${yAt(c.close)}`).join(' ');
+  const areaPts = `${PAD.left},${H-PAD.bottom} ${linePts} ${xAt(n-1)},${H-PAD.bottom}`;
+  const area = document.createElementNS(svgNS, 'polygon');
+  area.setAttribute('points', areaPts);
+  area.setAttribute('class', 'price-area');
+  svg.appendChild(area);
+
+  const line = document.createElementNS(svgNS, 'polyline');
+  line.setAttribute('points', linePts);
+  line.setAttribute('class', 'price-line');
+  svg.appendChild(line);
+
+  // trades: jitter same-day trades across a fraction of the day's band width
+  const byIdx = new Map();
+  vTrades.forEach(t => {
+    const localI = t.idx - startIdx;
+    if (!byIdx.has(localI)) byIdx.set(localI, []);
+    byIdx.get(localI).push(t);
+  });
+  const bandW = n > 1 ? plotW / (n - 1) : plotW;
+  const jitterSpan = Math.min(bandW * 0.8, 14);
+
+  byIdx.forEach((list, localI) => {
+    const baseX = xAt(localI);
+    list.forEach((t, j) => {
+      const offset = list.length === 1 ? 0 : (j - (list.length - 1) / 2) * (jitterSpan / Math.max(1, list.length - 1));
+      const x = baseX + offset;
+      const yEntry = yAt(t.entry);
+      const yExit = yAt(t.exit);
+      const good = t.pnl >= 0;
+      const color = good ? 'var(--status-good)' : 'var(--status-critical)';
+
+      const link = document.createElementNS(svgNS, 'line');
+      link.setAttribute('x1', x); link.setAttribute('x2', x);
+      link.setAttribute('y1', yEntry); link.setAttribute('y2', yExit);
+      link.setAttribute('stroke', color);
+      link.setAttribute('class', 'trade-link');
+      link.setAttribute('opacity', '0.55');
+      svg.appendChild(link);
+
+      const exitDot = document.createElementNS(svgNS, 'circle');
+      exitDot.setAttribute('cx', x); exitDot.setAttribute('cy', yExit); exitDot.setAttribute('r', 3.5);
+      exitDot.setAttribute('class', 'trade-exit');
+      exitDot.setAttribute('stroke', color);
+      svg.appendChild(exitDot);
+
+      const marker = document.createElementNS(svgNS, 'polygon');
+      const r = 5;
+      const points = t.direction === '買'
+        ? `${x},${yEntry-r} ${x+r},${yEntry+r} ${x-r},${yEntry+r}`
+        : `${x-r},${yEntry-r} ${x+r},${yEntry-r} ${x},${yEntry+r}`;
+      marker.setAttribute('points', points);
+      marker.setAttribute('fill', color);
+      marker.setAttribute('class', 'trade-marker');
+      svg.appendChild(marker);
+    });
+  });
+
+  // hover overlay
+  const overlay = document.createElementNS(svgNS, 'rect');
+  overlay.setAttribute('x', PAD.left); overlay.setAttribute('y', PAD.top);
+  overlay.setAttribute('width', plotW); overlay.setAttribute('height', plotH);
+  overlay.setAttribute('fill', 'transparent');
+  const crosshair = document.createElementNS(svgNS, 'line');
+  crosshair.setAttribute('y1', PAD.top); crosshair.setAttribute('y2', H - PAD.bottom);
+  crosshair.setAttribute('class', 'crosshair');
+  crosshair.style.display = 'none';
+  svg.appendChild(crosshair);
+  svg.appendChild(overlay);
+
+  overlay.addEventListener('mousemove', (ev) => {
+    const rect = svg.getBoundingClientRect();
+    const scale = W / rect.width;
+    const mx = (ev.clientX - rect.left) * scale;
+    let i = Math.round(((mx - PAD.left) / plotW) * (n - 1));
+    i = Math.max(0, Math.min(n - 1, i));
+    const x = xAt(i);
+    crosshair.setAttribute('x1', x); crosshair.setAttribute('x2', x);
+    crosshair.style.display = '';
+
+    const c = vc[i];
+    const dayTrades = byIdx.get(i) || [];
+    let html = `<div class="t-date">${c.date}</div><div class="t-close">終値 ${fmtPrice(c.close)}（高${fmtPrice(c.high)} / 安${fmtPrice(c.low)}）</div>`;
+    if (dayTrades.length) {
+      html += dayTrades.map(t => {
+        const cls = t.pnl >= 0 ? 't-pnl-good' : 't-pnl-bad';
+        return `<div class="t-trade">${t.datetime.slice(11,16)} ${t.direction} ${t.qty.toLocaleString('ja-JP')}<br>
+          ${fmtPrice(t.entry)} → ${fmtPrice(t.exit)}　<span class="${cls}">${fmtPnl(t.pnl)}（${fmtPips(t.pips)}pips）</span></div>`;
+      }).join('');
+    } else {
+      html += `<div class="t-close">この日の取引なし</div>`;
+    }
+    tooltip.innerHTML = html;
+    tooltip.style.display = 'block';
+    const wrapRect = overlay.ownerSVGElement.parentElement.getBoundingClientRect();
+    let left = ev.clientX - wrapRect.left + 14;
+    let top = ev.clientY - wrapRect.top + 14;
+    if (left + 280 > wrapRect.width) left = ev.clientX - wrapRect.left - 294;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+  });
+  overlay.addEventListener('mouseleave', () => {
+    tooltip.style.display = 'none';
+    crosshair.style.display = 'none';
+  });
+
+  // table
+  const tbody = document.getElementById('tradeTableBody');
+  tbody.innerHTML = vTrades.slice().reverse().map(t => {
+    const cls = t.pnl >= 0 ? 'pnl-good' : 'pnl-bad';
+    return `<tr><td>${t.datetime}</td><td>${t.direction}</td><td>${t.qty.toLocaleString('ja-JP')}</td>
+      <td>${fmtPrice(t.entry)}</td><td>${fmtPrice(t.exit)}</td>
+      <td class="${cls}">${fmtPnl(t.pnl)}</td><td class="${cls}">${fmtPips(t.pips)}</td></tr>`;
+  }).join('');
+}
+
+const toggleBtn = document.getElementById('toggleTable');
+const tableScroll = document.getElementById('tableScroll');
+let tableShown = false;
+toggleBtn.addEventListener('click', () => {
+  tableShown = !tableShown;
+  tableScroll.style.display = tableShown ? 'block' : 'none';
+  toggleBtn.textContent = tableShown ? 'チャート表示に切り替え' : 'テーブル表示に切り替え';
+});
+
+render();
+</script>
+</body>
+</html>
