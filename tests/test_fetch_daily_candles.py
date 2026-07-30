@@ -1,0 +1,42 @@
+import pytest
+
+import fetch_daily_candles as fdc
+
+
+class FakeResponse:
+    def __init__(self, payload):
+        self._payload = payload
+
+    def json(self):
+        return self._payload
+
+
+def test_fetch_daily_candles_sorts_by_datetime(monkeypatch):
+    payload = {
+        "status": "ok",
+        "values": [
+            {"datetime": "2026-06-02", "open": "1", "high": "2", "low": "0.5", "close": "1.5"},
+            {"datetime": "2026-06-01", "open": "1", "high": "2", "low": "0.5", "close": "1.5"},
+        ],
+    }
+
+    def fake_get(url, params, timeout):
+        return FakeResponse(payload)
+
+    monkeypatch.setattr(fdc.requests, "get", fake_get)
+
+    result = fdc.fetch_daily_candles("USD/JPY", "key", "2026-06-01", "2026-06-02")
+
+    assert [c["datetime"] for c in result] == ["2026-06-01", "2026-06-02"]
+
+
+def test_fetch_daily_candles_raises_on_error_status(monkeypatch):
+    payload = {"status": "error", "message": "invalid api key"}
+
+    def fake_get(url, params, timeout):
+        return FakeResponse(payload)
+
+    monkeypatch.setattr(fdc.requests, "get", fake_get)
+
+    with pytest.raises(RuntimeError):
+        fdc.fetch_daily_candles("USD/JPY", "bad-key", "2026-06-01", "2026-06-02")
