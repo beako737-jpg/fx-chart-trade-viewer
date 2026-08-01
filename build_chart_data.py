@@ -50,6 +50,17 @@ def load_trades(csv_path: str, symbol: str, mapping: dict):
     trades = []
     with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames or []
+        missing = [col for col in mapping.values() if col not in fieldnames]
+        if missing:
+            raise SystemExit(
+                "CSV is missing expected column(s): "
+                + ", ".join(missing)
+                + f"\nColumns found in {csv_path}: "
+                + ", ".join(fieldnames)
+                + "\nIf your broker's export uses different column names, pass "
+                "--mapping mapping.json to override them (see README)."
+            )
         for row in reader:
             if symbol and row[mapping["pair"]] != symbol:
                 continue
