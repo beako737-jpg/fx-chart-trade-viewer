@@ -23,10 +23,25 @@ def fetch_daily_candles(symbol: str, api_key: str, start_date: str, end_date: st
         "end_date": end_date,
         "apikey": api_key,
     }
-    resp = requests.get(url, params=params, timeout=30)
-    data = resp.json()
+    try:
+        resp = requests.get(url, params=params, timeout=30)
+    except requests.exceptions.RequestException as e:
+        raise SystemExit(
+            f"Could not reach Twelve Data (network error): {e}\n"
+            "Check your internet connection and try again."
+        )
+
+    try:
+        data = resp.json()
+    except ValueError:
+        raise SystemExit(
+            f"Twelve Data returned a non-JSON response (HTTP {resp.status_code}).\n"
+            "This usually means the API is down or a proxy/firewall intercepted the request."
+        )
+
     if data.get("status") != "ok":
-        raise RuntimeError(data)
+        message = data.get("message", data)
+        raise SystemExit(f"Twelve Data API error: {message}")
     return sorted(data["values"], key=lambda c: c["datetime"])
 
 
