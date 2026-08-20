@@ -38,5 +38,5 @@ def test_fetch_daily_candles_raises_on_error_status(monkeypatch):
 
     monkeypatch.setattr(fdc.requests, "get", fake_get)
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(SystemExit):
         fdc.fetch_daily_candles("USD/JPY", "bad-key", "2026-06-01", "2026-06-02")
