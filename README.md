@@ -16,6 +16,8 @@ python build_chart_html.py --data sample_data/sample_chart_data.json --template 
 
 `demo.html` をブラウザで開くと、日足チャートに売買マーカー（利益は緑、損失は赤）が重なって表示されます。ホバーでその日の取引明細も見られます。
 
+Python を実行せずにまず見た目を確認したい場合は、リポジトリに同梱済みの [`sample_demo.html`](sample_demo.html) をブラウザで直接開いても、同じ表示を確認できます。
+
 ## 自分のデータで使う
 
 1. 証券会社から約定履歴CSVをダウンロード
