@@ -1,5 +1,7 @@
 # fx-chart-trade-viewer
 
+[![CI](https://github.com/beako737-jpg/fx-chart-trade-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/beako737-jpg/fx-chart-trade-viewer/actions/workflows/ci.yml)
+
 証券会社の約定履歴CSVと、無料の価格データAPI（[Twelve Data](https://twelvedata.com/)）の日足チャートを重ね合わせて、**1つのオフラインHTMLファイル**として可視化するツールです。有料の売買分析ツールを使わなくても、自分のエントリー・決済タイミングをチャート上で振り返れます。
 
 - 依存ライブラリなしの自己完結HTML（`requests` 以外は標準ライブラリのみ）
