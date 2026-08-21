@@ -61,12 +61,12 @@ def load_trades(csv_path: str, symbol: str, mapping: dict):
                 + "\nIf your broker's export uses different column names, pass "
                 "--mapping mapping.json to override them (see README)."
             )
-        for row in reader:
+        for row_num, row in enumerate(reader, start=2):
             if symbol and row[mapping["pair"]] != symbol:
                 continue
             dt = row[mapping["datetime"]]
-            trades.append(
-                {
+            try:
+                trade = {
                     "id": row[mapping["id"]],
                     "datetime": dt,
                     "date": dt.split(" ")[0],
@@ -77,7 +77,12 @@ def load_trades(csv_path: str, symbol: str, mapping: dict):
                     "pnl": float(row[mapping["pnl"]]),
                     "pips": float(row[mapping["pips"]]),
                 }
-            )
+            except ValueError as e:
+                raise SystemExit(
+                    f"{csv_path}: row {row_num}: could not parse a numeric column ({e}).\n"
+                    f"Row data: {row}"
+                )
+            trades.append(trade)
     trades.sort(key=lambda t: t["datetime"])
     return trades
 

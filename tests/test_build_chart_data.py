@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 import build_chart_data as bcd
 
 
@@ -74,3 +76,16 @@ def test_load_trades_custom_mapping(tmp_path):
 
     assert len(trades) == 1
     assert trades[0]["id"] == "T1"
+
+
+def test_load_trades_reports_row_number_on_bad_numeric_value(tmp_path):
+    csv_text = (
+        "約定番号,日時,通貨ペア,売買,数量,約定価格,決済価格,損益,pips\n"
+        "S0001,2026-06-01 09:30:00,USD/JPY,買,10000,155.30,155.75,45.0,4.5\n"
+        "S0002,2026-06-02 10:00:00,USD/JPY,買,N/A,156.30,155.90,40.0,4.0\n"
+    )
+    path = tmp_path / "trades.csv"
+    path.write_text(csv_text, encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="row 3"):
+        bcd.load_trades(str(path), "", bcd.DEFAULT_MAPPING)
