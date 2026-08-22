@@ -78,6 +78,28 @@ def test_load_trades_custom_mapping(tmp_path):
     assert trades[0]["id"] == "T1"
 
 
+def test_load_mapping_missing_file_gives_friendly_error(tmp_path):
+    missing = tmp_path / "no_such_mapping.json"
+
+    with pytest.raises(SystemExit, match="Mapping file not found"):
+        bcd.load_mapping(str(missing))
+
+
+def test_load_mapping_invalid_json_gives_friendly_error(tmp_path):
+    path = tmp_path / "mapping.json"
+    path.write_text("{not valid json", encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="Invalid JSON in mapping file"):
+        bcd.load_mapping(str(path))
+
+
+def test_load_mapping_valid_file_returns_dict(tmp_path):
+    path = tmp_path / "mapping.json"
+    path.write_text(json.dumps({"id": "trade_id"}), encoding="utf-8")
+
+    assert bcd.load_mapping(str(path)) == {"id": "trade_id"}
+
+
 def test_load_trades_reports_row_number_on_bad_numeric_value(tmp_path):
     csv_text = (
         "約定番号,日時,通貨ペア,売買,数量,約定価格,決済価格,損益,pips\n"
