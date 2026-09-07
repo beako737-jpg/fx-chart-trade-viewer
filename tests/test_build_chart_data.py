@@ -20,6 +20,24 @@ def test_load_candles_sorts_and_converts_types(tmp_path):
     assert isinstance(candles[0]["open"], float)
 
 
+def test_load_candles_reports_missing_field(tmp_path):
+    raw = [{"date": "2026-06-01", "open": "155.2", "high": "155.8", "low": "154.9"}]
+    path = tmp_path / "candles.json"
+    path.write_text(json.dumps(raw), encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="missing required field 'close'"):
+        bcd.load_candles(str(path))
+
+
+def test_load_candles_reports_bad_numeric_value(tmp_path):
+    raw = [{"date": "2026-06-01", "open": "N/A", "high": "155.8", "low": "154.9", "close": "155.6"}]
+    path = tmp_path / "candles.json"
+    path.write_text(json.dumps(raw), encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="candle 0"):
+        bcd.load_candles(str(path))
+
+
 def test_load_trades_filters_by_symbol_and_sorts(tmp_path):
     csv_text = (
         "約定番号,日時,通貨ペア,売買,数量,約定価格,決済価格,損益,pips\n"

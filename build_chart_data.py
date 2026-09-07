@@ -31,19 +31,24 @@ DEFAULT_MAPPING = {
 def load_candles(path: str):
     with open(path, encoding="utf-8-sig") as f:
         raw = json.load(f)
-    return sorted(
-        [
-            {
-                "date": c["date"],
-                "open": float(c["open"]),
-                "high": float(c["high"]),
-                "low": float(c["low"]),
-                "close": float(c["close"]),
-            }
-            for c in raw
-        ],
-        key=lambda c: c["date"],
-    )
+    candles = []
+    for i, c in enumerate(raw):
+        try:
+            candles.append(
+                {
+                    "date": c["date"],
+                    "open": float(c["open"]),
+                    "high": float(c["high"]),
+                    "low": float(c["low"]),
+                    "close": float(c["close"]),
+                }
+            )
+        except KeyError as e:
+            raise SystemExit(f"{path}: candle {i} is missing required field {e}.\nCandle data: {c}")
+        except (TypeError, ValueError) as e:
+            raise SystemExit(f"{path}: candle {i} has a non-numeric OHLC value ({e}).\nCandle data: {c}")
+    candles.sort(key=lambda c: c["date"])
+    return candles
 
 
 def load_trades(csv_path: str, symbol: str, mapping: dict):
