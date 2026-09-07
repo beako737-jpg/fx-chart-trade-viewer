@@ -29,8 +29,13 @@ DEFAULT_MAPPING = {
 
 
 def load_candles(path: str):
-    with open(path, encoding="utf-8-sig") as f:
-        raw = json.load(f)
+    candles_path = Path(path)
+    if not candles_path.exists():
+        raise SystemExit(f"Candles file not found: {path}")
+    try:
+        raw = json.loads(candles_path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError as e:
+        raise SystemExit(f"Invalid JSON in candles file {path}: {e}")
     candles = []
     for i, c in enumerate(raw):
         try:
@@ -52,6 +57,8 @@ def load_candles(path: str):
 
 
 def load_trades(csv_path: str, symbol: str, mapping: dict):
+    if not Path(csv_path).exists():
+        raise SystemExit(f"CSV file not found: {csv_path}")
     trades = []
     seen_pairs = set()
     with open(csv_path, encoding="utf-8-sig") as f:

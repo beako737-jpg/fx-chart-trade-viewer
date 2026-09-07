@@ -20,6 +20,28 @@ def test_load_candles_sorts_and_converts_types(tmp_path):
     assert isinstance(candles[0]["open"], float)
 
 
+def test_load_candles_missing_file_gives_friendly_error(tmp_path):
+    missing = tmp_path / "no_such_candles.json"
+
+    with pytest.raises(SystemExit, match="Candles file not found"):
+        bcd.load_candles(str(missing))
+
+
+def test_load_candles_invalid_json_gives_friendly_error(tmp_path):
+    path = tmp_path / "candles.json"
+    path.write_text("{not valid json", encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="Invalid JSON in candles file"):
+        bcd.load_candles(str(path))
+
+
+def test_load_trades_missing_file_gives_friendly_error(tmp_path):
+    missing = tmp_path / "no_such_trades.csv"
+
+    with pytest.raises(SystemExit, match="CSV file not found"):
+        bcd.load_trades(str(missing), "", bcd.DEFAULT_MAPPING)
+
+
 def test_load_candles_reports_missing_field(tmp_path):
     raw = [{"date": "2026-06-01", "open": "155.2", "high": "155.8", "low": "154.9"}]
     path = tmp_path / "candles.json"
