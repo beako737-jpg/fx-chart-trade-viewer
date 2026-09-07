@@ -56,6 +56,16 @@ def load_candles(path: str):
     return candles
 
 
+def load_mapping(path: str):
+    mapping_path = Path(path)
+    if not mapping_path.exists():
+        raise SystemExit(f"Mapping file not found: {path}")
+    try:
+        return json.loads(mapping_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise SystemExit(f"Invalid JSON in mapping file {path}: {e}")
+
+
 def load_trades(csv_path: str, symbol: str, mapping: dict):
     if not Path(csv_path).exists():
         raise SystemExit(f"CSV file not found: {csv_path}")
@@ -120,7 +130,7 @@ def main():
 
     mapping = dict(DEFAULT_MAPPING)
     if args.mapping:
-        mapping.update(json.loads(Path(args.mapping).read_text(encoding="utf-8")))
+        mapping.update(load_mapping(args.mapping))
 
     candles = load_candles(args.candles)
     trades = load_trades(args.csv, args.symbol, mapping)
