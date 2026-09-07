@@ -11,7 +11,7 @@
 ## クイックスタート（サンプルデータ）
 
 ```bash
-pip install requests  # fetch_daily_candles.py を使う場合のみ必要
+pip install -r requirements.txt  # fetch_daily_candles.py を使う場合のみ必要
 python build_chart_data.py --csv sample_data/sample_trades.csv --candles sample_data/sample_candles.json --symbol "USD/JPY" --out sample_data/sample_chart_data.json
 python build_chart_html.py --data sample_data/sample_chart_data.json --template template.html --out demo.html
 ```
