@@ -36,25 +36,31 @@ def load_candles(path: str):
         raw = json.loads(candles_path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError as e:
         raise SystemExit(f"Invalid JSON in candles file {path}: {e}")
-    return sorted(
-        [
-            {
-                "date": c["date"],
-                "open": float(c["open"]),
-                "high": float(c["high"]),
-                "low": float(c["low"]),
-                "close": float(c["close"]),
-            }
-            for c in raw
-        ],
-        key=lambda c: c["date"],
-    )
+    candles = []
+    for i, c in enumerate(raw):
+        try:
+            candles.append(
+                {
+                    "date": c["date"],
+                    "open": float(c["open"]),
+                    "high": float(c["high"]),
+                    "low": float(c["low"]),
+                    "close": float(c["close"]),
+                }
+            )
+        except KeyError as e:
+            raise SystemExit(f"{path}: candle {i} is missing required field {e}.\nCandle data: {c}")
+        except (TypeError, ValueError) as e:
+            raise SystemExit(f"{path}: candle {i} has a non-numeric OHLC value ({e}).\nCandle data: {c}")
+    candles.sort(key=lambda c: c["date"])
+    return candles
 
 
 def load_trades(csv_path: str, symbol: str, mapping: dict):
     if not Path(csv_path).exists():
         raise SystemExit(f"CSV file not found: {csv_path}")
     trades = []
+    seen_pairs = set()
     with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames or []
@@ -69,7 +75,9 @@ def load_trades(csv_path: str, symbol: str, mapping: dict):
                 "--mapping mapping.json to override them (see README)."
             )
         for row_num, row in enumerate(reader, start=2):
-            if symbol and row[mapping["pair"]] != symbol:
+            pair = row[mapping["pair"]]
+            seen_pairs.add(pair)
+            if symbol and pair != symbol:
                 continue
             dt = row[mapping["datetime"]]
             try:
@@ -90,6 +98,13 @@ def load_trades(csv_path: str, symbol: str, mapping: dict):
                     f"Row data: {row}"
                 )
             trades.append(trade)
+    if symbol and not trades and seen_pairs:
+        raise SystemExit(
+            f"No trades matched --symbol '{symbol}' in {csv_path}.\n"
+            "Pairs found in this file: "
+            + ", ".join(sorted(seen_pairs))
+            + "\nCheck for a typo, or omit --symbol to include all pairs."
+        )
     trades.sort(key=lambda t: t["datetime"])
     return trades
 

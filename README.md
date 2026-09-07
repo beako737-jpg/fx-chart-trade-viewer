@@ -11,7 +11,7 @@
 ## クイックスタート（サンプルデータ）
 
 ```bash
-pip install requests  # fetch_daily_candles.py を使う場合のみ必要
+pip install -r requirements.txt  # fetch_daily_candles.py を使う場合のみ必要
 python build_chart_data.py --csv sample_data/sample_trades.csv --candles sample_data/sample_candles.json --symbol "USD/JPY" --out sample_data/sample_chart_data.json
 python build_chart_html.py --data sample_data/sample_chart_data.json --template template.html --out demo.html
 ```
@@ -27,6 +27,15 @@ Python を実行せずにまず見た目を確認したい場合は、リポジ�
 3. `python build_chart_data.py --csv your_trades.csv --candles candles_cache.json --out chart_data.json`
    - デフォルトの列名は `約定番号 / 日時 / 通貨ペア / 売買 / 数量 / 約定価格 / 決済価格 / 損益 / pips`。違う場合は `--mapping mapping.json` で上書き可能。
 4. `python build_chart_html.py --data chart_data.json --out my_chart.html`
+
+## 開発（テストの実行）
+
+```bash
+pip install requests pytest
+pytest -q
+```
+
+`push` / PR 作成時は GitHub Actions が同じテストを自動実行します（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)）。
 
 ## ライセンス
 
