@@ -70,6 +70,19 @@ def test_load_trades_no_symbol_filter_keeps_all_pairs(tmp_path):
     assert len(trades) == 2
 
 
+def test_load_trades_symbol_typo_lists_pairs_found(tmp_path):
+    csv_text = (
+        "約定番号,日時,通貨ペア,売買,数量,約定価格,決済価格,損益,pips\n"
+        "S0001,2026-06-01 09:30:00,USD/JPY,買,10000,155.30,155.75,45.0,4.5\n"
+        "S0002,2026-06-02 10:00:00,EUR/USD,買,10000,1.10,1.11,10.0,1.0\n"
+    )
+    path = tmp_path / "trades.csv"
+    path.write_text(csv_text, encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="EUR/USD, USD/JPY"):
+        bcd.load_trades(str(path), "USDJPY", bcd.DEFAULT_MAPPING)
+
+
 def test_load_trades_custom_mapping(tmp_path):
     csv_text = "id,dt,pair,side,qty,entry,exit,pnl,pips\n" "T1,2026-06-01 09:00:00,USD/JPY,buy,1,155.0,155.5,5.0,5.0\n"
     path = tmp_path / "trades.csv"

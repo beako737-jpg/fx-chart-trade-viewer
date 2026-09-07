@@ -53,6 +53,7 @@ def load_candles(path: str):
 
 def load_trades(csv_path: str, symbol: str, mapping: dict):
     trades = []
+    seen_pairs = set()
     with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames or []
@@ -67,7 +68,9 @@ def load_trades(csv_path: str, symbol: str, mapping: dict):
                 "--mapping mapping.json to override them (see README)."
             )
         for row_num, row in enumerate(reader, start=2):
-            if symbol and row[mapping["pair"]] != symbol:
+            pair = row[mapping["pair"]]
+            seen_pairs.add(pair)
+            if symbol and pair != symbol:
                 continue
             dt = row[mapping["datetime"]]
             try:
@@ -88,6 +91,13 @@ def load_trades(csv_path: str, symbol: str, mapping: dict):
                     f"Row data: {row}"
                 )
             trades.append(trade)
+    if symbol and not trades and seen_pairs:
+        raise SystemExit(
+            f"No trades matched --symbol '{symbol}' in {csv_path}.\n"
+            "Pairs found in this file: "
+            + ", ".join(sorted(seen_pairs))
+            + "\nCheck for a typo, or omit --symbol to include all pairs."
+        )
     trades.sort(key=lambda t: t["datetime"])
     return trades
 
