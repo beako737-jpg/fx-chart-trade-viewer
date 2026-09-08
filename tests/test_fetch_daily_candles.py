@@ -40,3 +40,12 @@ def test_fetch_daily_candles_raises_on_error_status(monkeypatch):
 
     with pytest.raises(SystemExit):
         fdc.fetch_daily_candles("USD/JPY", "bad-key", "2026-06-01", "2026-06-02")
+
+
+def test_parse_date_accepts_valid_date():
+    assert fdc.parse_date("start", "2026-06-01") == "2026-06-01"
+
+
+def test_parse_date_rejects_malformed_date():
+    with pytest.raises(SystemExit, match="--start must be in YYYY-MM-DD format"):
+        fdc.parse_date("start", "2026/06/01")

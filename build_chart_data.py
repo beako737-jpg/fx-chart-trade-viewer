@@ -36,6 +36,11 @@ def load_candles(path: str):
         raw = json.loads(candles_path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError as e:
         raise SystemExit(f"Invalid JSON in candles file {path}: {e}")
+    if not isinstance(raw, list):
+        raise SystemExit(
+            f"{path}: expected a JSON list of candle objects, got {type(raw).__name__}.\n"
+            "Did you pass the wrong file for --candles?"
+        )
     candles = []
     for i, c in enumerate(raw):
         try:
