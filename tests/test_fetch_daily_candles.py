@@ -1,3 +1,6 @@
+import json
+import sys
+
 import pytest
 
 import fetch_daily_candles as fdc
@@ -49,3 +52,43 @@ def test_parse_date_accepts_valid_date():
 def test_parse_date_rejects_malformed_date():
     with pytest.raises(SystemExit, match="--start must be in YYYY-MM-DD format"):
         fdc.parse_date("start", "2026/06/01")
+
+
+def test_main_creates_missing_output_directory(tmp_path, monkeypatch):
+    payload = {
+        "status": "ok",
+        "values": [
+            {"datetime": "2026-06-01", "open": "1", "high": "2", "low": "0.5", "close": "1.5"},
+        ],
+    }
+
+    def fake_get(url, params, timeout):
+        return FakeResponse(payload)
+
+    monkeypatch.setattr(fdc.requests, "get", fake_get)
+
+    out_path = tmp_path / "nested" / "does" / "not" / "exist" / "candles_cache.json"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "fetch_daily_candles.py",
+            "--symbol",
+            "USD/JPY",
+            "--start",
+            "2026-06-01",
+            "--end",
+            "2026-06-01",
+            "--api-key",
+            "key",
+            "--out",
+            str(out_path),
+        ],
+    )
+
+    fdc.main()
+
+    assert out_path.exists()
+    written = json.loads(out_path.read_text(encoding="utf-8"))
+    assert len(written) == 1

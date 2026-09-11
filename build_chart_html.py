@@ -37,7 +37,9 @@ def main():
         )
     final_html = template.replace("__DATA_JSON__", data_json)
 
-    Path(args.out).write_text(final_html, encoding="utf-8")
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(final_html, encoding="utf-8")
     print(f"written: {args.out} ({len(final_html)} chars)")
 
 
