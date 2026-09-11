@@ -10,8 +10,17 @@ close to the limit.
 """
 import argparse
 import json
+from datetime import datetime
 
 import requests
+
+
+def parse_date(label: str, value: str) -> str:
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+    except ValueError:
+        raise SystemExit(f"--{label} must be in YYYY-MM-DD format, got '{value}'")
+    return value
 
 
 def fetch_daily_candles(symbol: str, api_key: str, start_date: str, end_date: str):
@@ -53,6 +62,11 @@ def main():
     ap.add_argument("--api-key", required=True, help="Twelve Data API key (free tier works)")
     ap.add_argument("--out", default="candles_cache.json")
     args = ap.parse_args()
+
+    parse_date("start", args.start)
+    parse_date("end", args.end)
+    if args.start > args.end:
+        raise SystemExit(f"--start ({args.start}) must not be after --end ({args.end})")
 
     raw = fetch_daily_candles(args.symbol, args.api_key, args.start, args.end)
     candles = [

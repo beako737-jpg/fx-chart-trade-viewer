@@ -35,6 +35,14 @@ def test_load_candles_invalid_json_gives_friendly_error(tmp_path):
         bcd.load_candles(str(path))
 
 
+def test_load_candles_non_list_json_gives_friendly_error(tmp_path):
+    path = tmp_path / "candles.json"
+    path.write_text(json.dumps({"date": "2026-06-01"}), encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="expected a JSON list of candle objects"):
+        bcd.load_candles(str(path))
+
+
 def test_load_trades_missing_file_gives_friendly_error(tmp_path):
     missing = tmp_path / "no_such_trades.csv"
 
