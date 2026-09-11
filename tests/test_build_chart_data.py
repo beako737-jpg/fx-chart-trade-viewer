@@ -161,6 +161,14 @@ def test_load_mapping_valid_file_returns_dict(tmp_path):
     assert bcd.load_mapping(str(path)) == {"id": "trade_id"}
 
 
+def test_load_mapping_non_object_json_gives_friendly_error(tmp_path):
+    path = tmp_path / "mapping.json"
+    path.write_text(json.dumps(["id", "trade_id"]), encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="expected a JSON object mapping field names"):
+        bcd.load_mapping(str(path))
+
+
 def test_load_trades_reports_row_number_on_bad_numeric_value(tmp_path):
     csv_text = (
         "約定番号,日時,通貨ペア,売買,数量,約定価格,決済価格,損益,pips\n"

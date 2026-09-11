@@ -66,9 +66,15 @@ def load_mapping(path: str):
     if not mapping_path.exists():
         raise SystemExit(f"Mapping file not found: {path}")
     try:
-        return json.loads(mapping_path.read_text(encoding="utf-8"))
+        data = json.loads(mapping_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
         raise SystemExit(f"Invalid JSON in mapping file {path}: {e}")
+    if not isinstance(data, dict):
+        raise SystemExit(
+            f"{path}: expected a JSON object mapping field names to CSV column names, "
+            f"got {type(data).__name__}.\nDid you pass the wrong file for --mapping?"
+        )
+    return data
 
 
 def load_trades(csv_path: str, symbol: str, mapping: dict):
