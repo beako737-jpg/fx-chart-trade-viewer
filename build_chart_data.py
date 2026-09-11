@@ -136,7 +136,9 @@ def main():
     trades = load_trades(args.csv, args.symbol, mapping)
 
     out = {"candles": candles, "trades": trades}
-    with open(args.out, "w", encoding="utf-8") as f:
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False)
 
     print(f"candles: {len(candles)}, trades: {len(trades)}")

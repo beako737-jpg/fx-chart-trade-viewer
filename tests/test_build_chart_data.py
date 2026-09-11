@@ -1,4 +1,5 @@
 import json
+import sys
 
 import pytest
 
@@ -164,3 +165,40 @@ def test_load_trades_reports_row_number_on_bad_numeric_value(tmp_path):
 
     with pytest.raises(SystemExit, match="row 3"):
         bcd.load_trades(str(path), "", bcd.DEFAULT_MAPPING)
+
+
+def test_main_creates_missing_output_directory(tmp_path, monkeypatch):
+    candles_path = tmp_path / "candles.json"
+    candles_path.write_text(
+        json.dumps([{"date": "2026-06-01", "open": "1", "high": "2", "low": "0.5", "close": "1.5"}]),
+        encoding="utf-8",
+    )
+
+    csv_text = (
+        "約定番号,日時,通貨ペア,売買,数量,約定価格,決済価格,損益,pips\n"
+        "S0001,2026-06-01 09:30:00,USD/JPY,買,10000,155.30,155.75,45.0,4.5\n"
+    )
+    csv_path = tmp_path / "trades.csv"
+    csv_path.write_text(csv_text, encoding="utf-8")
+
+    out_path = tmp_path / "nested" / "does" / "not" / "exist" / "chart_data.json"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "build_chart_data.py",
+            "--csv",
+            str(csv_path),
+            "--candles",
+            str(candles_path),
+            "--out",
+            str(out_path),
+        ],
+    )
+
+    bcd.main()
+
+    assert out_path.exists()
+    written = json.loads(out_path.read_text(encoding="utf-8"))
+    assert len(written["trades"]) == 1

@@ -10,6 +10,7 @@ close to the limit.
 """
 import argparse
 import json
+from pathlib import Path
 
 import requests
 
@@ -65,7 +66,9 @@ def main():
         }
         for c in raw
     ]
-    with open(args.out, "w", encoding="utf-8") as f:
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(candles, f, ensure_ascii=False)
     print(f"{len(candles)} candles written to {args.out}")
 
