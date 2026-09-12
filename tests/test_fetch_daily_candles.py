@@ -92,3 +92,61 @@ def test_main_creates_missing_output_directory(tmp_path, monkeypatch):
     assert out_path.exists()
     written = json.loads(out_path.read_text(encoding="utf-8"))
     assert len(written) == 1
+
+
+def test_main_falls_back_to_api_key_env_var(tmp_path, monkeypatch):
+    payload = {
+        "status": "ok",
+        "values": [
+            {"datetime": "2026-06-01", "open": "1", "high": "2", "low": "0.5", "close": "1.5"},
+        ],
+    }
+    seen_params = {}
+
+    def fake_get(url, params, timeout):
+        seen_params.update(params)
+        return FakeResponse(payload)
+
+    monkeypatch.setattr(fdc.requests, "get", fake_get)
+    monkeypatch.setenv("TWELVEDATA_API_KEY", "env-key")
+
+    out_path = tmp_path / "candles_cache.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "fetch_daily_candles.py",
+            "--symbol",
+            "USD/JPY",
+            "--start",
+            "2026-06-01",
+            "--end",
+            "2026-06-01",
+            "--out",
+            str(out_path),
+        ],
+    )
+
+    fdc.main()
+
+    assert seen_params["apikey"] == "env-key"
+
+
+def test_main_requires_api_key_from_flag_or_env(monkeypatch):
+    monkeypatch.delenv("TWELVEDATA_API_KEY", raising=False)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "fetch_daily_candles.py",
+            "--symbol",
+            "USD/JPY",
+            "--start",
+            "2026-06-01",
+            "--end",
+            "2026-06-01",
+        ],
+    )
+
+    with pytest.raises(SystemExit, match="No API key given"):
+        fdc.main()
