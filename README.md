@@ -24,6 +24,7 @@ Python を実行せずにまず見た目を確認したい場合は、リポジ�
 
 1. 証券会社から約定履歴CSVをダウンロード
 2. `python fetch_daily_candles.py --symbol USD/JPY --start 2026-01-01 --end 2026-07-28 --api-key YOUR_TWELVEDATA_KEY --out candles_cache.json`（[Twelve Data](https://twelvedata.com/)で無料キー取得）
+   - `--api-key` の代わりに環境変数 `TWELVEDATA_API_KEY` を設定してもOK（シェル履歴にキーを残したくない場合に便利）
 3. `python build_chart_data.py --csv your_trades.csv --candles candles_cache.json --out chart_data.json`
    - デフォルトの列名は `約定番号 / 日時 / 通貨ペア / 売買 / 数量 / 約定価格 / 決済価格 / 損益 / pips`。違う場合は `--mapping mapping.json` で上書き可能。
 4. `python build_chart_html.py --data chart_data.json --out my_chart.html`

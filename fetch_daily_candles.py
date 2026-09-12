@@ -4,12 +4,16 @@ Usage:
     python fetch_daily_candles.py --symbol USD/JPY --start 2026-01-01 --end 2026-07-28 \
         --api-key YOUR_KEY --out candles_cache.json
 
+The API key can also be supplied via the TWELVEDATA_API_KEY environment
+variable instead of --api-key, which avoids leaving it in your shell history.
+
 Free plan limits (as of writing): 800 requests/day, 8 requests/minute.
 This script makes exactly one request per run, so normal use never comes
 close to the limit.
 """
 import argparse
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -60,16 +64,28 @@ def main():
     ap.add_argument("--symbol", required=True, help="e.g. USD/JPY")
     ap.add_argument("--start", required=True, help="YYYY-MM-DD")
     ap.add_argument("--end", required=True, help="YYYY-MM-DD")
-    ap.add_argument("--api-key", required=True, help="Twelve Data API key (free tier works)")
+    ap.add_argument(
+        "--api-key",
+        default=None,
+        help="Twelve Data API key (free tier works). Falls back to the "
+        "TWELVEDATA_API_KEY environment variable if omitted.",
+    )
     ap.add_argument("--out", default="candles_cache.json")
     args = ap.parse_args()
+
+    api_key = args.api_key or os.environ.get("TWELVEDATA_API_KEY")
+    if not api_key:
+        raise SystemExit(
+            "No API key given. Pass --api-key YOUR_KEY or set the "
+            "TWELVEDATA_API_KEY environment variable."
+        )
 
     parse_date("start", args.start)
     parse_date("end", args.end)
     if args.start > args.end:
         raise SystemExit(f"--start ({args.start}) must not be after --end ({args.end})")
 
-    raw = fetch_daily_candles(args.symbol, args.api_key, args.start, args.end)
+    raw = fetch_daily_candles(args.symbol, api_key, args.start, args.end)
     candles = [
         {
             "date": c["datetime"],
