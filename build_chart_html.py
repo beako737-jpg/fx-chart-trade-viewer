@@ -27,6 +27,17 @@ def main():
         data_obj = json.loads(data_path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError as e:
         raise SystemExit(f"Invalid JSON in {args.data}: {e}")
+    if (
+        not isinstance(data_obj, dict)
+        or not isinstance(data_obj.get("candles"), list)
+        or not isinstance(data_obj.get("trades"), list)
+    ):
+        raise SystemExit(
+            f"{args.data}: expected a JSON object with \"candles\" and \"trades\" list "
+            f"fields (the output of build_chart_data.py), got {type(data_obj).__name__}.\n"
+            "Did you pass --data at candles_cache.json or another file instead of "
+            "the merged chart_data.json?"
+        )
     data_json = json.dumps(data_obj, ensure_ascii=False, separators=(",", ":"))
 
     template = template_path.read_text(encoding="utf-8")
