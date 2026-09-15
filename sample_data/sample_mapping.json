@@ -1,0 +1,11 @@
+{
+  "id": "id",
+  "datetime": "datetime",
+  "pair": "pair",
+  "direction": "side",
+  "qty": "qty",
+  "entry": "entry_price",
+  "exit": "exit_price",
+  "pnl": "pnl",
+  "pips": "pips"
+}

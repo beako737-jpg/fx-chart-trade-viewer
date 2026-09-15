@@ -26,7 +26,8 @@ Python を実行せずにまず見た目を確認したい場合は、リポジ�
 2. `python fetch_daily_candles.py --symbol USD/JPY --start 2026-01-01 --end 2026-07-28 --api-key YOUR_TWELVEDATA_KEY --out candles_cache.json`（[Twelve Data](https://twelvedata.com/)で無料キー取得）
    - `--api-key` の代わりに環境変数 `TWELVEDATA_API_KEY` を設定してもOK（シェル履歴にキーを残したくない場合に便利）
 3. `python build_chart_data.py --csv your_trades.csv --candles candles_cache.json --out chart_data.json`
-   - デフォルトの列名は `約定番号 / 日時 / 通貨ペア / 売買 / 数量 / 約定価格 / 決済価格 / 損益 / pips`。違う場合は `--mapping mapping.json` で上書き可能。
+   - デフォルトの列名は `約定番号 / 日時 / 通貨ペア / 売買 / 数量 / 約定価格 / 決済価格 / 損益 / pips`。違う場合は `--mapping mapping.json` で上書き可能。列名が英語（`id,datetime,pair,side,qty,entry_price,exit_price,pnl,pips` など）の場合のサンプルとして [`sample_data/sample_trades_en.csv`](sample_data/sample_trades_en.csv) と [`sample_data/sample_mapping.json`](sample_data/sample_mapping.json) を用意しています。
+   - 売買方向の値は `買/買い/buy/long/b`（買い）または `売/売り/sell/short/s`（売り、大文字小文字は区別しない）のいずれかである必要があります。それ以外の値が入っているとエラーで停止します。
 4. `python build_chart_html.py --data chart_data.json --out my_chart.html`
 
 ## 開発（テストの実行）

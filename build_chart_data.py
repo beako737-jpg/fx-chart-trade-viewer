@@ -27,6 +27,33 @@ DEFAULT_MAPPING = {
     "pips": "pips",
 }
 
+# The chart marker (▲ buy / ▼ sell) depends on this normalized "buy"/"sell"
+# value, not on the raw --mapping column's own text, so brokers using
+# English or other labels for direction still render correctly.
+DIRECTION_ALIASES = {
+    "買": "buy",
+    "買い": "buy",
+    "buy": "buy",
+    "long": "buy",
+    "b": "buy",
+    "売": "sell",
+    "売り": "sell",
+    "sell": "sell",
+    "short": "sell",
+    "s": "sell",
+}
+
+
+def normalize_direction(value: str, csv_path: str, row_num: int, row: dict) -> str:
+    side = DIRECTION_ALIASES.get(value.strip().lower())
+    if side is None:
+        raise SystemExit(
+            f"{csv_path}: row {row_num}: unrecognized direction value '{value}'.\n"
+            "Expected one of: 買/買い/buy/long/b (buy) or 売/売り/sell/short/s (sell).\n"
+            f"Row data: {row}"
+        )
+    return side
+
 
 def load_candles(path: str):
     candles_path = Path(path)
@@ -101,12 +128,15 @@ def load_trades(csv_path: str, symbol: str, mapping: dict):
             if symbol and pair != symbol:
                 continue
             dt = row[mapping["datetime"]]
+            direction = row[mapping["direction"]]
+            side = normalize_direction(direction, csv_path, row_num, row)
             try:
                 trade = {
                     "id": row[mapping["id"]],
                     "datetime": dt,
                     "date": dt.split(" ")[0],
-                    "direction": row[mapping["direction"]],
+                    "direction": direction,
+                    "side": side,
                     "qty": float(row[mapping["qty"]]),
                     "entry": float(row[mapping["entry"]]),
                     "exit": float(row[mapping["exit"]]),

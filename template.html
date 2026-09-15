@@ -331,7 +331,7 @@ function render() {
 
       const marker = document.createElementNS(svgNS, 'polygon');
       const r = 5;
-      const points = t.direction === '買'
+      const points = t.side === 'buy'
         ? `${x},${yEntry-r} ${x+r},${yEntry+r} ${x-r},${yEntry+r}`
         : `${x-r},${yEntry-r} ${x+r},${yEntry-r} ${x},${yEntry+r}`;
       marker.setAttribute('points', points);
