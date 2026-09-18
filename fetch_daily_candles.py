@@ -86,16 +86,28 @@ def main():
         raise SystemExit(f"--start ({args.start}) must not be after --end ({args.end})")
 
     raw = fetch_daily_candles(args.symbol, api_key, args.start, args.end)
-    candles = [
-        {
-            "date": c["datetime"],
-            "open": float(c["open"]),
-            "high": float(c["high"]),
-            "low": float(c["low"]),
-            "close": float(c["close"]),
-        }
-        for c in raw
-    ]
+    candles = []
+    for i, c in enumerate(raw):
+        try:
+            candles.append(
+                {
+                    "date": c["datetime"],
+                    "open": float(c["open"]),
+                    "high": float(c["high"]),
+                    "low": float(c["low"]),
+                    "close": float(c["close"]),
+                }
+            )
+        except KeyError as e:
+            raise SystemExit(
+                f"Twelve Data response: candle {i} is missing required field {e}.\n"
+                f"Candle data: {c}"
+            )
+        except (TypeError, ValueError) as e:
+            raise SystemExit(
+                f"Twelve Data response: candle {i} has a non-numeric OHLC value ({e}).\n"
+                f"Candle data: {c}"
+            )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
