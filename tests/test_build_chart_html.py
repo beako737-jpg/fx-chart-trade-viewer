@@ -1,6 +1,8 @@
 import json
 import sys
 
+import pytest
+
 import build_chart_html as bch
 
 
@@ -62,3 +64,37 @@ def test_main_creates_missing_output_directory(tmp_path, monkeypatch):
     bch.main()
 
     assert out_path.exists()
+
+
+@pytest.mark.parametrize(
+    "data_obj",
+    [
+        [{"date": "2026-06-01", "open": 1.0}],
+        {"candles": [{"date": "2026-06-01", "open": 1.0}]},
+        {"trades": []},
+        {"candles": "not-a-list", "trades": []},
+    ],
+)
+def test_main_rejects_data_missing_candles_or_trades(tmp_path, monkeypatch, data_obj):
+    data_path = tmp_path / "data.json"
+    data_path.write_text(json.dumps(data_obj), encoding="utf-8")
+
+    template_path = tmp_path / "template.html"
+    template_path.write_text("<html><script>var DATA=__DATA_JSON__;</script></html>", encoding="utf-8")
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "build_chart_html.py",
+            "--data",
+            str(data_path),
+            "--template",
+            str(template_path),
+            "--out",
+            str(tmp_path / "chart.html"),
+        ],
+    )
+
+    with pytest.raises(SystemExit, match="candles"):
+        bch.main()
