@@ -138,6 +138,39 @@ def test_load_trades_custom_mapping(tmp_path):
 
     assert len(trades) == 1
     assert trades[0]["id"] == "T1"
+    assert trades[0]["direction"] == "buy"
+    assert trades[0]["side"] == "buy"
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("買", "buy"),
+        ("買い", "buy"),
+        ("Buy", "buy"),
+        ("LONG", "buy"),
+        ("b", "buy"),
+        ("売", "sell"),
+        ("売り", "sell"),
+        ("Sell", "sell"),
+        ("short", "sell"),
+        ("s", "sell"),
+    ],
+)
+def test_normalize_direction_recognizes_aliases(raw, expected):
+    assert bcd.normalize_direction(raw, "trades.csv", 2, {}) == expected
+
+
+def test_load_trades_unrecognized_direction_gives_friendly_error(tmp_path):
+    csv_text = (
+        "約定番号,日時,通貨ペア,売買,数量,約定価格,決済価格,損益,pips\n"
+        "S0001,2026-06-01 09:30:00,USD/JPY,決済,10000,155.30,155.75,45.0,4.5\n"
+    )
+    path = tmp_path / "trades.csv"
+    path.write_text(csv_text, encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="unrecognized direction value '決済'"):
+        bcd.load_trades(str(path), "", bcd.DEFAULT_MAPPING)
 
 
 def test_load_mapping_missing_file_gives_friendly_error(tmp_path):
