@@ -104,51 +104,59 @@ def load_mapping(path: str):
     return data
 
 
-def load_trades(csv_path: str, symbol: str, mapping: dict):
+def load_trades(csv_path: str, symbol: str, mapping: dict, encoding: str = "utf-8-sig"):
     if not Path(csv_path).exists():
         raise SystemExit(f"CSV file not found: {csv_path}")
     trades = []
     seen_pairs = set()
-    with open(csv_path, encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        fieldnames = reader.fieldnames or []
-        missing = [col for col in mapping.values() if col not in fieldnames]
-        if missing:
-            raise SystemExit(
-                "CSV is missing expected column(s): "
-                + ", ".join(missing)
-                + f"\nColumns found in {csv_path}: "
-                + ", ".join(fieldnames)
-                + "\nIf your broker's export uses different column names, pass "
-                "--mapping mapping.json to override them (see README)."
-            )
-        for row_num, row in enumerate(reader, start=2):
-            pair = row[mapping["pair"]]
-            seen_pairs.add(pair)
-            if symbol and pair != symbol:
-                continue
-            dt = row[mapping["datetime"]]
-            direction = row[mapping["direction"]]
-            side = normalize_direction(direction, csv_path, row_num, row)
-            try:
-                trade = {
-                    "id": row[mapping["id"]],
-                    "datetime": dt,
-                    "date": dt.split(" ")[0],
-                    "direction": direction,
-                    "side": side,
-                    "qty": float(row[mapping["qty"]]),
-                    "entry": float(row[mapping["entry"]]),
-                    "exit": float(row[mapping["exit"]]),
-                    "pnl": float(row[mapping["pnl"]]),
-                    "pips": float(row[mapping["pips"]]),
-                }
-            except ValueError as e:
+    try:
+        with open(csv_path, encoding=encoding) as f:
+            reader = csv.DictReader(f)
+            fieldnames = reader.fieldnames or []
+            missing = [col for col in mapping.values() if col not in fieldnames]
+            if missing:
                 raise SystemExit(
-                    f"{csv_path}: row {row_num}: could not parse a numeric column ({e}).\n"
-                    f"Row data: {row}"
+                    "CSV is missing expected column(s): "
+                    + ", ".join(missing)
+                    + f"\nColumns found in {csv_path}: "
+                    + ", ".join(fieldnames)
+                    + "\nIf your broker's export uses different column names, pass "
+                    "--mapping mapping.json to override them (see README)."
                 )
-            trades.append(trade)
+            for row_num, row in enumerate(reader, start=2):
+                pair = row[mapping["pair"]]
+                seen_pairs.add(pair)
+                if symbol and pair != symbol:
+                    continue
+                dt = row[mapping["datetime"]]
+                direction = row[mapping["direction"]]
+                side = normalize_direction(direction, csv_path, row_num, row)
+                try:
+                    trade = {
+                        "id": row[mapping["id"]],
+                        "datetime": dt,
+                        "date": dt.split(" ")[0],
+                        "direction": direction,
+                        "side": side,
+                        "qty": float(row[mapping["qty"]]),
+                        "entry": float(row[mapping["entry"]]),
+                        "exit": float(row[mapping["exit"]]),
+                        "pnl": float(row[mapping["pnl"]]),
+                        "pips": float(row[mapping["pips"]]),
+                    }
+                except ValueError as e:
+                    raise SystemExit(
+                        f"{csv_path}: row {row_num}: could not parse a numeric column ({e}).\n"
+                        f"Row data: {row}"
+                    )
+                trades.append(trade)
+    except LookupError as e:
+        raise SystemExit(f"Unknown --csv-encoding '{encoding}': {e}")
+    except UnicodeDecodeError as e:
+        raise SystemExit(
+            f"{csv_path}: could not decode as {encoding} ({e}).\n"
+            "If this CSV came from a Japanese broker, try --csv-encoding cp932 (Shift-JIS)."
+        )
     if symbol and not trades and seen_pairs:
         raise SystemExit(
             f"No trades matched --symbol '{symbol}' in {csv_path}.\n"
@@ -166,6 +174,12 @@ def main():
     ap.add_argument("--candles", required=True, help="Daily OHLC JSON cache")
     ap.add_argument("--symbol", default="", help="Filter to one pair, e.g. USD/JPY (blank = no filter)")
     ap.add_argument("--mapping", default="", help="Optional JSON file overriding column-name mapping")
+    ap.add_argument(
+        "--csv-encoding",
+        default="utf-8-sig",
+        help="Encoding of --csv (default: utf-8-sig). Try cp932 if your broker's "
+        "export is Shift-JIS and you see garbled text or a decode error.",
+    )
     ap.add_argument("--out", default="chart_data.json")
     args = ap.parse_args()
 
@@ -174,7 +188,7 @@ def main():
         mapping.update(load_mapping(args.mapping))
 
     candles = load_candles(args.candles)
-    trades = load_trades(args.csv, args.symbol, mapping)
+    trades = load_trades(args.csv, args.symbol, mapping, args.csv_encoding)
 
     out = {"candles": candles, "trades": trades}
     out_path = Path(args.out)
