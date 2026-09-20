@@ -173,6 +173,44 @@ def test_load_trades_unrecognized_direction_gives_friendly_error(tmp_path):
         bcd.load_trades(str(path), "", bcd.DEFAULT_MAPPING)
 
 
+def test_load_trades_reads_custom_encoding(tmp_path):
+    csv_text = (
+        "約定番号,日時,通貨ペア,売買,数量,約定価格,決済価格,損益,pips\n"
+        "S0001,2026-06-01 09:30:00,USD/JPY,買,10000,155.30,155.75,45.0,4.5\n"
+    )
+    path = tmp_path / "trades.csv"
+    path.write_bytes(csv_text.encode("cp932"))
+
+    trades = bcd.load_trades(str(path), "", bcd.DEFAULT_MAPPING, encoding="cp932")
+
+    assert len(trades) == 1
+    assert trades[0]["id"] == "S0001"
+
+
+def test_load_trades_wrong_encoding_gives_friendly_error(tmp_path):
+    csv_text = (
+        "約定番号,日時,通貨ペア,売買,数量,約定価格,決済価格,損益,pips\n"
+        "S0001,2026-06-01 09:30:00,USD/JPY,買,10000,155.30,155.75,45.0,4.5\n"
+    )
+    path = tmp_path / "trades.csv"
+    path.write_bytes(csv_text.encode("cp932"))
+
+    with pytest.raises(SystemExit, match="try --csv-encoding cp932"):
+        bcd.load_trades(str(path), "", bcd.DEFAULT_MAPPING)
+
+
+def test_load_trades_unknown_encoding_gives_friendly_error(tmp_path):
+    csv_text = (
+        "約定番号,日時,通貨ペア,売買,数量,約定価格,決済価格,損益,pips\n"
+        "S0001,2026-06-01 09:30:00,USD/JPY,買,10000,155.30,155.75,45.0,4.5\n"
+    )
+    path = tmp_path / "trades.csv"
+    path.write_text(csv_text, encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="Unknown --csv-encoding 'not-a-real-encoding'"):
+        bcd.load_trades(str(path), "", bcd.DEFAULT_MAPPING, encoding="not-a-real-encoding")
+
+
 def test_load_mapping_missing_file_gives_friendly_error(tmp_path):
     missing = tmp_path / "no_such_mapping.json"
 

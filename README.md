@@ -28,6 +28,7 @@ Python を実行せずにまず見た目を確認したい場合は、リポジ�
 3. `python build_chart_data.py --csv your_trades.csv --candles candles_cache.json --out chart_data.json`
    - デフォルトの列名は `約定番号 / 日時 / 通貨ペア / 売買 / 数量 / 約定価格 / 決済価格 / 損益 / pips`。違う場合は `--mapping mapping.json` で上書き可能。列名が英語（`id,datetime,pair,side,qty,entry_price,exit_price,pnl,pips` など）の場合のサンプルとして [`sample_data/sample_trades_en.csv`](sample_data/sample_trades_en.csv) と [`sample_data/sample_mapping.json`](sample_data/sample_mapping.json) を用意しています。
    - 売買方向の値は `買/買い/buy/long/b`（買い）または `売/売り/sell/short/s`（売り、大文字小文字は区別しない）のいずれかである必要があります。それ以外の値が入っているとエラーで停止します。
+   - CSVの文字コードはデフォルトでUTF-8想定です。Shift-JIS（cp932）で出力する証券会社の場合は文字化けやデコードエラーになるので `--csv-encoding cp932` を指定してください。
 4. `python build_chart_html.py --data chart_data.json --out my_chart.html`
 
 ## 開発（テストの実行）
