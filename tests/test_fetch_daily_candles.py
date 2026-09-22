@@ -45,6 +45,18 @@ def test_fetch_daily_candles_raises_on_error_status(monkeypatch):
         fdc.fetch_daily_candles("USD/JPY", "bad-key", "2026-06-01", "2026-06-02")
 
 
+def test_fetch_daily_candles_raises_friendly_error_on_missing_values(monkeypatch):
+    payload = {"status": "ok"}
+
+    def fake_get(url, params, timeout):
+        return FakeResponse(payload)
+
+    monkeypatch.setattr(fdc.requests, "get", fake_get)
+
+    with pytest.raises(SystemExit, match='no "values" list'):
+        fdc.fetch_daily_candles("USD/JPY", "key", "2026-06-01", "2026-06-02")
+
+
 def test_parse_date_accepts_valid_date():
     assert fdc.parse_date("start", "2026-06-01") == "2026-06-01"
 
