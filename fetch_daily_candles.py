@@ -56,7 +56,15 @@ def fetch_daily_candles(symbol: str, api_key: str, start_date: str, end_date: st
     if data.get("status") != "ok":
         message = data.get("message", data)
         raise SystemExit(f"Twelve Data API error: {message}")
-    return sorted(data["values"], key=lambda c: c["datetime"])
+    values = data.get("values")
+    if not isinstance(values, list):
+        raise SystemExit(
+            "Twelve Data response has status \"ok\" but no \"values\" list "
+            f"(got {type(values).__name__ if values is not None else 'nothing'}).\n"
+            "This usually means the API response shape changed or the symbol/date "
+            f"range returned no data.\nResponse: {data}"
+        )
+    return sorted(values, key=lambda c: c["datetime"])
 
 
 def main():
