@@ -123,6 +123,12 @@ def load_trades(csv_path: str, symbol: str, mapping: dict):
                 "--mapping mapping.json to override them (see README)."
             )
         for row_num, row in enumerate(reader, start=2):
+            if None in row.values():
+                raise SystemExit(
+                    f"{csv_path}: row {row_num} has fewer columns than the header row "
+                    "(a trailing value is missing).\n"
+                    f"Row data: {row}"
+                )
             pair = row[mapping["pair"]]
             seen_pairs.add(pair)
             if symbol and pair != symbol:

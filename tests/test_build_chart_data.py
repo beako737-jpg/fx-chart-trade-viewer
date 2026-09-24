@@ -216,6 +216,18 @@ def test_load_trades_reports_row_number_on_bad_numeric_value(tmp_path):
         bcd.load_trades(str(path), "", bcd.DEFAULT_MAPPING)
 
 
+def test_load_trades_short_row_gives_friendly_error(tmp_path):
+    csv_text = (
+        "約定番号,日時,通貨ペア,売買,数量,約定価格,決済価格,損益,pips\n"
+        "S0001,2026-06-01 09:30:00,USD/JPY,買\n"
+    )
+    path = tmp_path / "trades.csv"
+    path.write_text(csv_text, encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="row 2 has fewer columns"):
+        bcd.load_trades(str(path), "", bcd.DEFAULT_MAPPING)
+
+
 def test_main_creates_missing_output_directory(tmp_path, monkeypatch):
     candles_path = tmp_path / "candles.json"
     candles_path.write_text(
