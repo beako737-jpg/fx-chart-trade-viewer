@@ -87,6 +87,20 @@ def test_load_trades_filters_by_symbol_and_sorts(tmp_path):
     assert trades[0]["pnl"] == 45.0
 
 
+def test_load_trades_tolerates_thousands_separator_commas(tmp_path):
+    csv_text = (
+        "約定番号,日時,通貨ペア,売買,数量,約定価格,決済価格,損益,pips\n"
+        "S0001,2026-06-01 09:30:00,USD/JPY,買,\"10,000\",155.30,155.75,\"1,234.5\",4.5\n"
+    )
+    path = tmp_path / "trades.csv"
+    path.write_text(csv_text, encoding="utf-8")
+
+    trades = bcd.load_trades(str(path), "", bcd.DEFAULT_MAPPING)
+
+    assert trades[0]["qty"] == 10000.0
+    assert trades[0]["pnl"] == 1234.5
+
+
 def test_load_trades_no_symbol_filter_keeps_all_pairs(tmp_path):
     csv_text = (
         "約定番号,日時,通貨ペア,売買,数量,約定価格,決済価格,損益,pips\n"
