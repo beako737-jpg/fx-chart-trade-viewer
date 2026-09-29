@@ -44,6 +44,14 @@ DIRECTION_ALIASES = {
 }
 
 
+def parse_number(value: str) -> float:
+    """Parse a numeric CSV field, tolerating thousands-separator commas
+    (e.g. "10,000") that many Japanese broker exports use for qty/price/pnl
+    columns.
+    """
+    return float(value.replace(",", ""))
+
+
 def normalize_direction(value: str, csv_path: str, row_num: int, row: dict) -> str:
     side = DIRECTION_ALIASES.get(value.strip().lower())
     if side is None:
@@ -137,11 +145,11 @@ def load_trades(csv_path: str, symbol: str, mapping: dict):
                     "date": dt.split(" ")[0],
                     "direction": direction,
                     "side": side,
-                    "qty": float(row[mapping["qty"]]),
-                    "entry": float(row[mapping["entry"]]),
-                    "exit": float(row[mapping["exit"]]),
-                    "pnl": float(row[mapping["pnl"]]),
-                    "pips": float(row[mapping["pips"]]),
+                    "qty": parse_number(row[mapping["qty"]]),
+                    "entry": parse_number(row[mapping["entry"]]),
+                    "exit": parse_number(row[mapping["exit"]]),
+                    "pnl": parse_number(row[mapping["pnl"]]),
+                    "pips": parse_number(row[mapping["pips"]]),
                 }
             except ValueError as e:
                 raise SystemExit(
