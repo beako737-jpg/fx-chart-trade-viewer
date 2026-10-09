@@ -204,6 +204,39 @@ def test_main_reports_friendly_error_on_non_numeric_value(tmp_path, monkeypatch)
         fdc.main()
 
 
+def test_main_reports_friendly_error_on_zero_candles(tmp_path, monkeypatch):
+    payload = {"status": "ok", "values": []}
+
+    def fake_get(url, params, timeout):
+        return FakeResponse(payload)
+
+    monkeypatch.setattr(fdc.requests, "get", fake_get)
+
+    out_path = tmp_path / "candles_cache.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "fetch_daily_candles.py",
+            "--symbol",
+            "USD/JPX",
+            "--start",
+            "2026-06-01",
+            "--end",
+            "2026-06-01",
+            "--api-key",
+            "key",
+            "--out",
+            str(out_path),
+        ],
+    )
+
+    with pytest.raises(SystemExit, match="returned 0 candles"):
+        fdc.main()
+
+    assert not out_path.exists()
+
+
 def test_main_requires_api_key_from_flag_or_env(monkeypatch):
     monkeypatch.delenv("TWELVEDATA_API_KEY", raising=False)
     monkeypatch.setattr(
