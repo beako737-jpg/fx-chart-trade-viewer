@@ -108,6 +108,13 @@ def main():
                 f"Twelve Data response: candle {i} has a non-numeric OHLC value ({e}).\n"
                 f"Candle data: {c}"
             )
+    if not candles:
+        raise SystemExit(
+            f"Twelve Data returned 0 candles for symbol '{args.symbol}' "
+            f"between {args.start} and {args.end}.\n"
+            "Check for a typo in --symbol, or widen --start/--end to cover at "
+            "least one trading day."
+        )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
